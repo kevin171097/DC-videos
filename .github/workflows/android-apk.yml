@@ -32,11 +32,22 @@ jobs:
 
       - name: Incluir JavaScript dentro del APK (sin Metro)
         run: |
-          echo "Configurando el empaquetado JavaScript también para debug..."
-          grep -n 'apply plugin:.*com.facebook.react' android/app/build.gradle
-          sed -i '/apply plugin:.*com.facebook.react/i project.ext.react = [bundleInDebug: true]' android/app/build.gradle
-          echo "=== CONFIGURACION REACT NATIVE ==="
-          grep -n -B 2 -A 2 'bundleInDebug' android/app/build.gradle
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("android/app/build.gradle")
+          s = p.read_text()
+          if "project.ext.react" in s:
+              s = re.sub(r"(?m)^project\\.ext\\.react\\s*=.*\\n", "", s)
+          if re.search(r"react\\s*\\{", s):
+              s = re.sub(r"(react\\s*\\{)", r"\\1\\n    debuggableVariants = []", s, count=1)
+          else:
+              s += "\\nreact {\\n    debuggableVariants = []\\n}\\n"
+          p.write_text(s)
+          print("Configuración React Native:")
+          print(s)
+          PY
+          grep -n -A 8 'react {' android/app/build.gradle
 
       - name: Corregir versión Kotlin generada por Expo
         run: |
@@ -79,6 +90,16 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
+
+      - name: Verificar que el APK incluya el bundle JavaScript
+        working-directory: android
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          unzip -l "$APK" | tee /tmp/apk-list.txt
+          grep -q 'assets/index.android.bundle' /tmp/apk-list.txt || {
+            echo "ERROR: el APK no contiene assets/index.android.bundle"
+            exit 1
+          }
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
