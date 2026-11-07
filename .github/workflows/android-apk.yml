@@ -30,11 +30,23 @@ jobs:
       - name: Generar proyecto Android
         run: CI=1 npx expo prebuild --platform android
 
+      - name: Corregir versión Kotlin generada por Expo
+        run: |
+          echo "Versiones Kotlin antes del ajuste:"
+          grep -RIn --exclude-dir=.gradle --exclude-dir=build '1.9.24' android || true
+          grep -RIl --exclude-dir=.gradle --exclude-dir=build '1.9.24' android | xargs -r sed -i 's/1.9.24/1.9.25/g'
+          echo "Versiones Kotlin después del ajuste:"
+          grep -RIn --exclude-dir=.gradle --exclude-dir=build -E '1.9.24|1.9.25' android || true
+          if grep -RIl --exclude-dir=.gradle --exclude-dir=build '1.9.24' android | grep -q .; then
+            echo "ERROR: todavía queda una referencia a Kotlin 1.9.24"
+            exit 1
+          fi
+
       - name: Compilar APK de prueba
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug -Pandroid.kotlinVersion=1.9.25
+          ./gradlew assembleDebug
 
       - name: Guardar APK
         uses: actions/upload-artifact@v4
