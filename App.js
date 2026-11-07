@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { auth, firebaseReady } from './firebaseClient';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from 'firebase/auth';
 import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, TextInput } from 'react-native';
 
 const pink = '#ff1688';
@@ -26,6 +28,17 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  useEffect(() => { if (!firebaseReady || !auth) return; return onAuthStateChanged(auth, user => setCurrentUser(user)); }, []);
+  const submitAuth = async () => {
+    const validEmail = authEmail.includes('@') && authEmail.includes('.');
+    if (!validEmail || authPassword.length < 6 || (authMode === 'register' && authName.trim().length < 2)) { setNotice('Revisa los datos. La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (!firebaseReady || !auth) { setNotice('Falta configurar Firebase para activar las cuentas reales.'); return; }
+    try { setAuthBusy(true); if (authMode === 'register') { const result = await createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword); await updateProfile(result.user, { displayName: authName.trim() }); } else { await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword); } setNotice('¡Listo! Ya ingresaste a DC VIDEOS.'); }
+    catch (error) { const messages = { 'auth/email-already-in-use':'Ese correo ya tiene una cuenta.', 'auth/invalid-email':'El correo no es válido.', 'auth/weak-password':'Usa una contraseña más segura.', 'auth/invalid-credential':'Correo o contraseña incorrectos.', 'auth/network-request-failed':'Revisa tu conexión a internet.' }; setNotice(messages[error.code] || 'No se pudo completar. Intenta nuevamente.'); }
+    finally { setAuthBusy(false); }
+  };
   const clip = clips[index];
   const next = () => setIndex((index + 1) % clips.length);
   const like = () => setLiked({...liked, [index]: !liked[index]});
@@ -52,25 +65,26 @@ export default function App() {
   const inbox = <View style={styles.page}><Text style={styles.pageTitle}>Bandeja</Text><View style={styles.empty}><Text style={styles.emptyIcon}>✉</Text><Text style={styles.cardTitle}>Tus mensajes aparecerán aquí</Text><Text style={styles.muted}>Los mensajes y notificaciones requieren cuentas conectadas.</Text></View></View>;
 
   const profile = <ScrollView contentContainerStyle={styles.page}>
-    <Text style={styles.pageTitle}>{authMode === 'register' ? 'Crear cuenta' : 'Iniciar sesión'}</Text>
-    <Text style={styles.muted}>Únete a la comunidad DC VIDEOS</Text>
-    <View style={styles.avatar}><Text style={styles.avatarText}>DC</Text></View>
-    {authMode === 'register' ? <TextInput value={authName} onChangeText={setAuthName} placeholder="Tu nombre de usuario" placeholderTextColor="#888" autoCapitalize="none" style={styles.authInput}/> : null}
-    <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Correo electrónico" placeholderTextColor="#888" keyboardType="email-address" autoCapitalize="none" style={styles.authInput}/>
-    <TextInput value={authPassword} onChangeText={setAuthPassword} placeholder="Contraseña" placeholderTextColor="#888" secureTextEntry style={styles.authInput}/>
-    <AppButton title={authMode === 'register' ? 'Crear mi cuenta' : 'Entrar'} onPress={()=>{
-      const validEmail = authEmail.includes('@') && authEmail.includes('.');
-      if (!validEmail || authPassword.length < 6 || (authMode === 'register' && authName.trim().length < 2)) {
-        setNotice('Completa los datos. La contraseña debe tener al menos 6 caracteres.');
-      } else {
-        setNotice('Formulario listo. Para activar cuentas reales y guardar contraseñas de forma segura, falta conectar el servicio de autenticación.');
-      }
-    }}/>
-    <Pressable onPress={()=>{setAuthMode(authMode === 'register' ? 'login' : 'register');setNotice('');}} style={{marginTop:20}}>
-      <Text style={styles.authSwitch}>{authMode === 'register' ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}</Text>
-    </Pressable>
+    <Text style={styles.pageTitle}>Mi perfil</Text>
+    {currentUser ? <>
+      <View style={styles.avatar}><Text style={styles.avatarText}>DC</Text></View>
+      <Text style={styles.profileName}>{currentUser.displayName || 'Usuario DC VIDEOS'}</Text>
+      <Text style={styles.muted}>{currentUser.email}</Text>
+      <View style={styles.stats}><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Siguiendo</Text></View><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Seguidores</Text></View><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Me gusta</Text></View></View>
+      <AppButton title="Cerrar sesión" onPress={async()=>{try{await signOut(auth);setNotice('Sesión cerrada.');}catch(e){setNotice('No se pudo cerrar sesión.');}}} outline/>
+    </> : <>
+      <Text style={styles.muted}>Crea tu cuenta o inicia sesión con correo electrónico</Text>
+      <View style={styles.avatar}><Text style={styles.avatarText}>DC</Text></View>
+      {authMode === 'register' ? <TextInput value={authName} onChangeText={setAuthName} placeholder="Tu nombre de usuario" placeholderTextColor="#888" autoCapitalize="none" style={styles.authInput}/> : null}
+      <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Correo electrónico" placeholderTextColor="#888" keyboardType="email-address" autoCapitalize="none" style={styles.authInput}/>
+      <TextInput value={authPassword} onChangeText={setAuthPassword} placeholder="Contraseña (mínimo 6 caracteres)" placeholderTextColor="#888" secureTextEntry style={styles.authInput}/>
+      <AppButton title={authBusy ? 'Un momento…' : authMode === 'register' ? 'Crear mi cuenta' : 'Entrar'} onPress={submitAuth}/>
+      <Pressable onPress={()=>{setAuthMode(authMode === 'register' ? 'login' : 'register');setNotice('');}} style={{marginTop:20}}>
+        <Text style={styles.authSwitch}>{authMode === 'register' ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}</Text>
+      </Pressable>
+      {!firebaseReady ? <Text style={styles.authFoot}>La conexión segura de cuentas se activará al configurar Firebase.</Text> : null}
+    </>}
     {notice ? <Text style={styles.notice}>{notice}</Text>:null}
-    <Text style={styles.authFoot}>Tus datos se protegerán al conectar el sistema seguro de cuentas.</Text>
   </ScrollView>;
 
   const live = <View style={styles.page}><Text style={styles.pageTitle}>Transmisiones LIVE</Text><View style={styles.livePanel}><View style={styles.liveBadge}><View style={styles.dot}/><Text style={styles.liveText}>EN DIRECTO</Text></View><Text style={styles.liveBig}>LIVE</Text><Text style={styles.cardTitle}>Conecta en tiempo real</Text><Text style={styles.muted}>Estamos preparando las transmisiones en vivo para DC VIDEOS.</Text></View><AppButton title="Próximamente" onPress={()=>setNotice('LIVE necesita integrar un servicio de transmisión antes de funcionar.')}/>{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
