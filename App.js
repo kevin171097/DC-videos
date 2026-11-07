@@ -15,8 +15,14 @@ const tabs = ['Inicio', 'Explorar', '＋', 'Bandeja', 'Perfil'];
 function Action({ label, icon, onPress }) {
   return <Pressable style={styles.action} onPress={onPress}><Text style={styles.actionIcon}>{icon}</Text><Text style={styles.actionText}>{label}</Text></Pressable>;
 }
-function AppButton({ title, onPress, outline }) {
-  return <Pressable onPress={onPress} style={[styles.button, outline && styles.buttonOutline]}><Text style={[styles.buttonText, outline && {color:pink}]}>{title}</Text></Pressable>;
+function AppButton({ title, onPress, outline, disabled }) {
+  return <Pressable disabled={disabled} onPress={onPress} style={[styles.button, outline && styles.buttonOutline, disabled && {opacity:0.55}]}><Text style={[styles.buttonText, outline && {color:pink}]}>{title}</Text></Pressable>;
+}
+function withTimeout(promise, ms = 20000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(Object.assign(new Error('La conexión tardó demasiado.'), { code: 'auth/timeout' })), ms);
+    promise.then(value => { clearTimeout(timer); resolve(value); }, error => { clearTimeout(timer); reject(error); });
+  });
 }
 export default function App() {
   const [tab, setTab] = useState('Inicio');
@@ -35,8 +41,8 @@ export default function App() {
     const validEmail = authEmail.includes('@') && authEmail.includes('.');
     if (!validEmail || authPassword.length < 6 || (authMode === 'register' && authName.trim().length < 2)) { setNotice('Revisa los datos. La contraseña debe tener al menos 6 caracteres.'); return; }
     if (!firebaseReady || !auth) { setNotice('Falta configurar Firebase para activar las cuentas reales.'); return; }
-    try { setAuthBusy(true); if (authMode === 'register') { const result = await createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword); await updateProfile(result.user, { displayName: authName.trim() }); } else { await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword); } setNotice('¡Listo! Ya ingresaste a DC VIDEOS.'); }
-    catch (error) { const messages = { 'auth/email-already-in-use':'Ese correo ya tiene una cuenta.', 'auth/invalid-email':'El correo no es válido.', 'auth/weak-password':'Usa una contraseña más segura.', 'auth/invalid-credential':'Correo o contraseña incorrectos.', 'auth/network-request-failed':'Revisa tu conexión a internet.' }; setNotice(messages[error.code] || 'No se pudo completar. Intenta nuevamente.'); }
+    try { setAuthBusy(true); if (authMode === 'register') { const result = await withTimeout(createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword)); updateProfile(result.user, { displayName: authName.trim() }).catch(() => {}); } else { await withTimeout(signInWithEmailAndPassword(auth, authEmail.trim(), authPassword)); } setNotice('¡Listo! Ya ingresaste a DC VIDEOS.'); }
+    catch (error) { const messages = { 'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Prueba iniciar sesión.', 'auth/invalid-email':'El correo no es válido.', 'auth/weak-password':'Usa una contraseña más segura.', 'auth/invalid-credential':'Correo o contraseña incorrectos.', 'auth/network-request-failed':'No hay conexión con Firebase. Revisa internet e inténtalo otra vez.', 'auth/timeout':'Firebase no respondió en 20 segundos. Revisa internet y la configuración de Authentication.' }; setNotice(messages[error.code] || `No se pudo crear la cuenta (${error.code || 'error desconocido'}).`); }
     finally { setAuthBusy(false); }
   };
   const clip = clips[index];
@@ -78,7 +84,7 @@ export default function App() {
       {authMode === 'register' ? <TextInput value={authName} onChangeText={setAuthName} placeholder="Tu nombre de usuario" placeholderTextColor="#888" autoCapitalize="none" style={styles.authInput}/> : null}
       <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Correo electrónico" placeholderTextColor="#888" keyboardType="email-address" autoCapitalize="none" style={styles.authInput}/>
       <TextInput value={authPassword} onChangeText={setAuthPassword} placeholder="Contraseña (mínimo 6 caracteres)" placeholderTextColor="#888" secureTextEntry style={styles.authInput}/>
-      <AppButton title={authBusy ? 'Un momento…' : authMode === 'register' ? 'Crear mi cuenta' : 'Entrar'} onPress={submitAuth}/>
+      <AppButton title={authBusy ? 'Conectando…' : authMode === 'register' ? 'Crear mi cuenta' : 'Entrar'} onPress={submitAuth} disabled={authBusy}/>
       <Pressable onPress={()=>{setAuthMode(authMode === 'register' ? 'login' : 'register');setNotice('');}} style={{marginTop:20}}>
         <Text style={styles.authSwitch}>{authMode === 'register' ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}</Text>
       </Pressable>
