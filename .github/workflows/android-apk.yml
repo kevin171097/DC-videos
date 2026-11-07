@@ -42,6 +42,17 @@ jobs:
             exit 1
           fi
 
+      - name: Forzar Kotlin 1.9.25 en React Native y Gradle
+        run: |
+          if [ -f node_modules/react-native/gradle/libs.versions.toml ]; then
+            sed -i 's/1.9.24/1.9.25/g' node_modules/react-native/gradle/libs.versions.toml
+          fi
+          sed -i "s#classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')#classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25')#" android/build.gradle
+          echo "=== VERSION KOTLIN EN CATALOGO REACT NATIVE ==="
+          grep -n -i -C 2 kotlin node_modules/react-native/gradle/libs.versions.toml || true
+          echo "=== PLUGIN KOTLIN CONFIGURADO ==="
+          grep -n 'kotlin-gradle-plugin' android/build.gradle
+
       - name: Diagnosticar versiones Kotlin y Compose
         run: |
           echo "=== REFERENCIAS EN ARCHIVOS ANDROID Y NODE_MODULES ==="
