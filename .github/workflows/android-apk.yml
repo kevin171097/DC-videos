@@ -27,14 +27,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-
       - name: Generar proyecto Android
         run: npx expo prebuild --platform android --non-interactive
 
