@@ -96,6 +96,16 @@ jobs:
             exit 1
           }
 
+      - name: Firmar y verificar el APK para Android
+        run: |
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          KEY="$RUNNER_TEMP/dc-videos-debug.keystore"
+          keytool -genkeypair -v -keystore "$KEY" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          "$BUILD_TOOLS/apksigner" sign --ks "$KEY" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android "$APK"
+          "$BUILD_TOOLS/apksigner" verify --verbose "$APK"
+          ls -lh "$APK"
+
       - name: Guardar APK
         uses: actions/upload-artifact@v4
         with:
