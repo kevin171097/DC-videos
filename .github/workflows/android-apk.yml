@@ -30,6 +30,10 @@ jobs:
       - name: Generar proyecto Android
         run: npx expo prebuild --platform android --non-interactive
 
+      - name: Corregir versión de Kotlin
+        run: |
+          grep -RIl "1.9.24" android --include='*.gradle' --include='*.gradle.kts' --include='*.properties' | xargs -r sed -i 's/1.9.24/1.9.25/g'
+
       - name: Compilar APK de prueba
         working-directory: android
         run: |
