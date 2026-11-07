@@ -34,20 +34,15 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path("android/app/build.gradle")
-          s = p.read_text()
-          if "project.ext.react" in s:
-              s = re.sub(r"(?m)^project\\.ext\\.react\\s*=.*\\n", "", s)
-          if re.search(r"react\\s*\\{", s):
-              s = re.sub(r"(react\\s*\\{)", r"\\1\\n    debuggableVariants = []", s, count=1)
-          else:
-              s += "\\nreact {\\n    debuggableVariants = []\\n}\\n"
+          lines = p.read_text().splitlines()
+          lines = [line for line in lines if "project.ext.react" not in line]
+          s = "\n".join(lines)
+          s += "\n\nreact {\n    debuggableVariants = []\n}\n"
           p.write_text(s)
-          print("Configuración React Native:")
-          print(s)
+          print("Configuración React Native agregada para incluir el bundle en debug.")
           PY
-          grep -n -A 8 'react {' android/app/build.gradle
+          tail -n 18 android/app/build.gradle
 
       - name: Corregir versión Kotlin generada por Expo
         run: |
