@@ -42,6 +42,19 @@ jobs:
             exit 1
           fi
 
+      - name: Diagnosticar versiones Kotlin y Compose
+        run: |
+          echo "=== REFERENCIAS EN ARCHIVOS ANDROID Y NODE_MODULES ==="
+          grep -RIn --exclude-dir=.gradle --exclude-dir=build --exclude='*.map' -E '1\\.9\\.24|1\\.9\\.25|1\\.5\\.15|kotlinCompilerExtensionVersion|kotlin-gradle-plugin|org.jetbrains.kotlin' android node_modules/expo-modules-core node_modules/expo node_modules/react-native 2>/dev/null | head -300 || true
+          echo "=== android/build.gradle ==="
+          sed -n '1,180p' android/build.gradle
+          echo "=== android/settings.gradle ==="
+          sed -n '1,180p' android/settings.gradle
+          echo "=== expo-modules-core/android/build.gradle ==="
+          sed -n '1,220p' node_modules/expo-modules-core/android/build.gradle 2>/dev/null || true
+          echo "=== expo-modules-core/android/gradle.properties ==="
+          cat node_modules/expo-modules-core/android/gradle.properties 2>/dev/null || true
+
       - name: Compilar APK de prueba
         working-directory: android
         run: |
