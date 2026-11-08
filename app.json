@@ -5,6 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "android": {"package": "com.dcmodas.dcvideos"}
+    "android": {
+      "package": "com.dcmodas.dcvideos"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DC VIDEOS necesita acceso a tus videos para que puedas publicarlos.",
+          "cameraPermission": "DC VIDEOS necesita acceso a la cámara para grabar videos.",
+          "microphonePermission": "DC VIDEOS necesita acceso al micrófono para grabar videos."
+        }
+      ]
+    ]
   }
 }
