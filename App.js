@@ -73,7 +73,7 @@ export default function App() {
       const fileData = decode(base64);
       const safeName = (asset.name || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `${currentUser.uid}/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage.from('videos').upload(path, fileData, {
+      const { error } = await supabase.storage.from('Videos').upload(path, fileData, {
         contentType: asset.mimeType || 'video/mp4',
         upsert: false,
       });
