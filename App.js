@@ -3,6 +3,8 @@ import { auth, firebaseReady } from './firebaseClient';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from 'firebase/auth';
 import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from './supabaseClient';
 
 const pink = '#ff1688';
@@ -63,11 +65,15 @@ export default function App() {
       });
       if (result.canceled || !result.assets?.length) return;
       const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      // Android entrega a menudo URI content://; leer el archivo con Expo
+      // FileSystem evita fetch() local, que provoca Network request failed.
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const fileData = decode(base64);
       const safeName = (asset.name || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `${currentUser.uid}/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage.from('videos').upload(path, blob, {
+      const { error } = await supabase.storage.from('videos').upload(path, fileData, {
         contentType: asset.mimeType || 'video/mp4',
         upsert: false,
       });
