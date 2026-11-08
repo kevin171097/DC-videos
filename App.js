@@ -10,7 +10,7 @@ import { supabase } from './supabaseClient';
 const pink = '#ff1688';
 const gold = '#d9b45b';
 const clips = [
-  { user: '@dcvideos', title: 'Bienvenidos a DC VIDEOS', caption: 'Tu espacio para descubrir y compartir videos.', tag: '#DCVideos' },
+  { user: '@dayxon', title: 'Bienvenidos a DAYXON', caption: 'Tu espacio para descubrir y compartir videos.', tag: '#DAYXON' },
   { user: '@creadores', title: 'Tu próximo video puede estar aquí', caption: 'Comparte tus momentos con la comunidad.', tag: '#MiVideo' },
   { user: '@dcmodas', title: 'Estilo, creatividad y tendencia', caption: 'Descubre contenido de la comunidad.', tag: '#Estilo' },
 ];
@@ -47,7 +47,7 @@ export default function App() {
     const validEmail = authEmail.includes('@') && authEmail.includes('.');
     if (!validEmail || authPassword.length < 6 || (authMode === 'register' && authName.trim().length < 2)) { setNotice('Revisa los datos. La contraseña debe tener al menos 6 caracteres.'); return; }
     if (!firebaseReady || !auth) { setNotice('Falta configurar Firebase para activar las cuentas reales.'); return; }
-    try { setAuthBusy(true); if (authMode === 'register') { const result = await withTimeout(createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword)); updateProfile(result.user, { displayName: authName.trim() }).catch(() => {}); } else { await withTimeout(signInWithEmailAndPassword(auth, authEmail.trim(), authPassword)); } setNotice('¡Listo! Ya ingresaste a DC VIDEOS.'); }
+    try { setAuthBusy(true); if (authMode === 'register') { const result = await withTimeout(createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword)); updateProfile(result.user, { displayName: authName.trim() }).catch(() => {}); } else { await withTimeout(signInWithEmailAndPassword(auth, authEmail.trim(), authPassword)); } setNotice('¡Listo! Ya ingresaste a DAYXON.'); }
     catch (error) { const messages = { 'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Prueba iniciar sesión.', 'auth/invalid-email':'El correo no es válido.', 'auth/weak-password':'Usa una contraseña más segura.', 'auth/invalid-credential':'Correo o contraseña incorrectos.', 'auth/network-request-failed':'No hay conexión con Firebase. Revisa internet e inténtalo otra vez.', 'auth/timeout':'Firebase no respondió en 20 segundos. Revisa internet y la configuración de Authentication.' }; setNotice(messages[error.code] || `No se pudo crear la cuenta (${error.code || 'error desconocido'}).`); }
     finally { setAuthBusy(false); }
   };
@@ -79,7 +79,7 @@ export default function App() {
       });
       if (error) throw error;
       setUploadedVideo(safeName);
-      setNotice('¡Video subido! Ya está guardado en DC VIDEOS.');
+      setNotice('¡Video subido! Ya está guardado en DAYXON.');
     } catch (error) {
       setNotice(error?.message || 'No se pudo subir el video. Revisa tu conexión e inténtalo otra vez.');
     } finally {
@@ -107,21 +107,21 @@ export default function App() {
 
   const explore = <ScrollView contentContainerStyle={styles.page}><Text style={styles.pageTitle}>Explorar</Text><Text style={styles.muted}>Encuentra videos y creadores</Text><TextInput value={query} onChangeText={setQuery} placeholder="Buscar videos o usuarios" placeholderTextColor="#888" style={styles.search}/><Text style={styles.sectionTitle}>Tendencias</Text>{['Para ti','Música','Humor','Moda y estilo','Deportes','Uruguay'].filter(x=>x.toLowerCase().includes(query.toLowerCase())).map(x=><Pressable key={x} style={styles.listRow} onPress={()=>setNotice('La búsqueda se conectará al contenido publicado.')}><Text style={styles.rowText}># {x}</Text><Text style={styles.gold}>›</Text></Pressable>)}</ScrollView>;
 
-  const publish = <View style={styles.page}><Text style={styles.pageTitle}>Crear publicación</Text><Text style={styles.muted}>Comparte un momento con DC VIDEOS</Text><View style={styles.uploadBox}><Text style={styles.uploadIcon}>＋</Text><Text style={styles.cardTitle}>Subir un video</Text><Text style={styles.muted}>{currentUser ? 'Elige un video guardado en tu celular.' : 'Inicia sesión para poder publicar.'}</Text>{uploadBusy ? <ActivityIndicator size="large" color={pink} style={{marginTop:18}}/> : null}</View><AppButton title={uploadBusy ? 'Subiendo video…' : 'Elegir video del celular'} onPress={uploadVideo} disabled={uploadBusy || !currentUser}/>{uploadedVideo ? <Text style={styles.muted}>Último video subido: {uploadedVideo}</Text> : null}{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
+  const publish = <View style={styles.page}><Text style={styles.pageTitle}>Crear publicación</Text><Text style={styles.muted}>Comparte un momento con DAYXON</Text><View style={styles.uploadBox}><Text style={styles.uploadIcon}>＋</Text><Text style={styles.cardTitle}>Subir un video</Text><Text style={styles.muted}>{currentUser ? 'Elige un video guardado en tu celular.' : 'Inicia sesión para poder publicar.'}</Text>{uploadBusy ? <ActivityIndicator size="large" color={pink} style={{marginTop:18}}/> : null}</View><AppButton title={uploadBusy ? 'Subiendo video…' : 'Elegir video del celular'} onPress={uploadVideo} disabled={uploadBusy || !currentUser}/>{uploadedVideo ? <Text style={styles.muted}>Último video subido: {uploadedVideo}</Text> : null}{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
 
   const inbox = <View style={styles.page}><Text style={styles.pageTitle}>Bandeja</Text><View style={styles.empty}><Text style={styles.emptyIcon}>✉</Text><Text style={styles.cardTitle}>Tus mensajes aparecerán aquí</Text><Text style={styles.muted}>Los mensajes y notificaciones requieren cuentas conectadas.</Text></View></View>;
 
   const profile = <ScrollView contentContainerStyle={styles.page}>
     <Text style={styles.pageTitle}>Mi perfil</Text>
     {currentUser ? <>
-      <View style={styles.avatar}><Text style={styles.avatarText}>DC</Text></View>
-      <Text style={styles.profileName}>{currentUser.displayName || 'Usuario DC VIDEOS'}</Text>
+      <View style={styles.avatar}><Text style={styles.avatarText}>DX</Text></View>
+      <Text style={styles.profileName}>{currentUser.displayName || 'Usuario DAYXON'}</Text>
       <Text style={styles.muted}>{currentUser.email}</Text>
       <View style={styles.stats}><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Siguiendo</Text></View><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Seguidores</Text></View><View><Text style={styles.statNum}>0</Text><Text style={styles.muted}>Me gusta</Text></View></View>
       <AppButton title="Cerrar sesión" onPress={async()=>{try{await signOut(auth);setNotice('Sesión cerrada.');}catch(e){setNotice('No se pudo cerrar sesión.');}}} outline/>
     </> : <>
       <Text style={styles.muted}>Crea tu cuenta o inicia sesión con correo electrónico</Text>
-      <View style={styles.avatar}><Text style={styles.avatarText}>DC</Text></View>
+      <View style={styles.avatar}><Text style={styles.avatarText}>DX</Text></View>
       {authMode === 'register' ? <TextInput value={authName} onChangeText={setAuthName} placeholder="Tu nombre de usuario" placeholderTextColor="#888" autoCapitalize="none" style={styles.authInput}/> : null}
       <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Correo electrónico" placeholderTextColor="#888" keyboardType="email-address" autoCapitalize="none" style={styles.authInput}/>
       <TextInput value={authPassword} onChangeText={setAuthPassword} placeholder="Contraseña (mínimo 6 caracteres)" placeholderTextColor="#888" secureTextEntry style={styles.authInput}/>
@@ -134,7 +134,7 @@ export default function App() {
     {notice ? <Text style={styles.notice}>{notice}</Text>:null}
   </ScrollView>;
 
-  const live = <View style={styles.page}><Text style={styles.pageTitle}>Transmisiones LIVE</Text><View style={styles.livePanel}><View style={styles.liveBadge}><View style={styles.dot}/><Text style={styles.liveText}>EN DIRECTO</Text></View><Text style={styles.liveBig}>LIVE</Text><Text style={styles.cardTitle}>Conecta en tiempo real</Text><Text style={styles.muted}>Estamos preparando las transmisiones en vivo para DC VIDEOS.</Text></View><AppButton title="Próximamente" onPress={()=>setNotice('LIVE necesita integrar un servicio de transmisión antes de funcionar.')}/>{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
+  const live = <View style={styles.page}><Text style={styles.pageTitle}>Transmisiones LIVE</Text><View style={styles.livePanel}><View style={styles.liveBadge}><View style={styles.dot}/><Text style={styles.liveText}>EN DIRECTO</Text></View><Text style={styles.liveBig}>LIVE</Text><Text style={styles.cardTitle}>Conecta en tiempo real</Text><Text style={styles.muted}>Estamos preparando las transmisiones en vivo para DAYXON.</Text></View><AppButton title="Próximamente" onPress={()=>setNotice('LIVE necesita integrar un servicio de transmisión antes de funcionar.')}/>{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
 
   const screens = {Inicio:feed, Explorar:explore, '＋':publish, Bandeja:inbox, Perfil:profile, LIVE:live};
   const navItems = [{tab:'Inicio',icon:'⌂',label:'Inicio'},{tab:'Explorar',icon:'⌕',label:'Explorar'},{tab:'＋',icon:'＋',label:'Publicar'},{tab:'Bandeja',icon:'▣',label:'Bandeja'},{tab:'Perfil',icon:'◉',label:'Perfil'}];
