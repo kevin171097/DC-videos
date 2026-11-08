@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { auth, firebaseReady } from './firebaseClient';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from 'firebase/auth';
-import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from './supabaseClient';
 
 const pink = '#ff1688';
 const gold = '#d9b45b';
@@ -36,6 +38,8 @@ export default function App() {
   const [authName, setAuthName] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadedVideo, setUploadedVideo] = useState('');
   useEffect(() => { if (!firebaseReady || !auth) return; return onAuthStateChanged(auth, user => setCurrentUser(user)); }, []);
   const submitAuth = async () => {
     const validEmail = authEmail.includes('@') && authEmail.includes('.');
@@ -44,6 +48,40 @@ export default function App() {
     try { setAuthBusy(true); if (authMode === 'register') { const result = await withTimeout(createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword)); updateProfile(result.user, { displayName: authName.trim() }).catch(() => {}); } else { await withTimeout(signInWithEmailAndPassword(auth, authEmail.trim(), authPassword)); } setNotice('¡Listo! Ya ingresaste a DC VIDEOS.'); }
     catch (error) { const messages = { 'auth/email-already-in-use':'Ese correo ya tiene una cuenta. Prueba iniciar sesión.', 'auth/invalid-email':'El correo no es válido.', 'auth/weak-password':'Usa una contraseña más segura.', 'auth/invalid-credential':'Correo o contraseña incorrectos.', 'auth/network-request-failed':'No hay conexión con Firebase. Revisa internet e inténtalo otra vez.', 'auth/timeout':'Firebase no respondió en 20 segundos. Revisa internet y la configuración de Authentication.' }; setNotice(messages[error.code] || `No se pudo crear la cuenta (${error.code || 'error desconocido'}).`); }
     finally { setAuthBusy(false); }
+  };
+  const uploadVideo = async () => {
+    if (!currentUser) { setNotice('Inicia sesión para publicar un video.'); return; }
+    try {
+      setUploadBusy(true);
+      setNotice('');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setNotice('Necesitamos permiso para elegir un video de tu celular.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const safeName = (asset.fileName || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${currentUser.uid}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from('videos').upload(path, blob, {
+        contentType: asset.mimeType || 'video/mp4',
+        upsert: false,
+      });
+      if (error) throw error;
+      setUploadedVideo(safeName);
+      setNotice('¡Video subido! Ya está guardado en DC VIDEOS.');
+    } catch (error) {
+      setNotice(error?.message || 'No se pudo subir el video. Revisa tu conexión e inténtalo otra vez.');
+    } finally {
+      setUploadBusy(false);
+    }
   };
   const clip = clips[index];
   const next = () => setIndex((index + 1) % clips.length);
@@ -66,7 +104,7 @@ export default function App() {
 
   const explore = <ScrollView contentContainerStyle={styles.page}><Text style={styles.pageTitle}>Explorar</Text><Text style={styles.muted}>Encuentra videos y creadores</Text><TextInput value={query} onChangeText={setQuery} placeholder="Buscar videos o usuarios" placeholderTextColor="#888" style={styles.search}/><Text style={styles.sectionTitle}>Tendencias</Text>{['Para ti','Música','Humor','Moda y estilo','Deportes','Uruguay'].filter(x=>x.toLowerCase().includes(query.toLowerCase())).map(x=><Pressable key={x} style={styles.listRow} onPress={()=>setNotice('La búsqueda se conectará al contenido publicado.')}><Text style={styles.rowText}># {x}</Text><Text style={styles.gold}>›</Text></Pressable>)}</ScrollView>;
 
-  const publish = <View style={styles.page}><Text style={styles.pageTitle}>Crear publicación</Text><Text style={styles.muted}>Comparte un momento con DC VIDEOS</Text><View style={styles.uploadBox}><Text style={styles.uploadIcon}>＋</Text><Text style={styles.cardTitle}>Subir un video</Text><Text style={styles.muted}>La selección de archivos se habilitará en la siguiente etapa.</Text></View><AppButton title="Continuar" onPress={()=>setNotice('La publicación real se habilitará al integrar la carga de videos.')}/>{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
+  const publish = <View style={styles.page}><Text style={styles.pageTitle}>Crear publicación</Text><Text style={styles.muted}>Comparte un momento con DC VIDEOS</Text><View style={styles.uploadBox}><Text style={styles.uploadIcon}>＋</Text><Text style={styles.cardTitle}>Subir un video</Text><Text style={styles.muted}>{currentUser ? 'Elige un video guardado en tu celular.' : 'Inicia sesión para poder publicar.'}</Text>{uploadBusy ? <ActivityIndicator size="large" color={pink} style={{marginTop:18}}/> : null}</View><AppButton title={uploadBusy ? 'Subiendo video…' : 'Elegir video del celular'} onPress={uploadVideo} disabled={uploadBusy || !currentUser}/>{uploadedVideo ? <Text style={styles.muted}>Último video subido: {uploadedVideo}</Text> : null}{notice ? <Text style={styles.notice}>{notice}</Text>:null}</View>;
 
   const inbox = <View style={styles.page}><Text style={styles.pageTitle}>Bandeja</Text><View style={styles.empty}><Text style={styles.emptyIcon}>✉</Text><Text style={styles.cardTitle}>Tus mensajes aparecerán aquí</Text><Text style={styles.muted}>Los mensajes y notificaciones requieren cuentas conectadas.</Text></View></View>;
 
