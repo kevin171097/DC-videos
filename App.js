@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { auth, firebaseReady } from './firebaseClient';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from 'firebase/auth';
 import { View, Text, StyleSheet, Pressable, StatusBar, ScrollView, TextInput, ActivityIndicator } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from './supabaseClient';
 
 const pink = '#ff1688';
@@ -54,21 +54,18 @@ export default function App() {
     try {
       setUploadBusy(true);
       setNotice('');
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setNotice('Necesitamos permiso para elegir un video de tu celular.');
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['videos'],
-        allowsEditing: false,
-        quality: 1,
+      // Usar el selector de archivos nativo de Android (SAF), sin pedir
+      // permisos de galería ni depender del módulo Expo Image Picker.
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'video/*',
+        copyToCacheDirectory: true,
+        multiple: false,
       });
       if (result.canceled || !result.assets?.length) return;
       const asset = result.assets[0];
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-      const safeName = (asset.fileName || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const safeName = (asset.name || 'video.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `${currentUser.uid}/${Date.now()}-${safeName}`;
       const { error } = await supabase.storage.from('videos').upload(path, blob, {
         contentType: asset.mimeType || 'video/mp4',
