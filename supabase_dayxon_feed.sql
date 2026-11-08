@@ -15,7 +15,7 @@ create table if not exists public.videos (
 alter table public.videos enable row level security;
 
 grant select on public.videos to anon, authenticated;
-grant insert, delete on public.videos to authenticated;
+grant insert, delete on public.videos to anon, authenticated;
 
 drop policy if exists "DAYXON videos publicos" on public.videos;
 create policy "DAYXON videos publicos"
@@ -26,8 +26,11 @@ using (true);
 drop policy if exists "DAYXON publicar propio" on public.videos;
 create policy "DAYXON publicar propio"
 on public.videos for insert
-to authenticated
-with check ((auth.jwt() ->> 'sub') = user_id);
+to public
+with check (
+  coalesce(auth.jwt() ->> 'sub', '') <> ''
+  and (auth.jwt() ->> 'sub') = user_id
+);
 
 drop policy if exists "DAYXON borrar propio" on public.videos;
 create policy "DAYXON borrar propio"
